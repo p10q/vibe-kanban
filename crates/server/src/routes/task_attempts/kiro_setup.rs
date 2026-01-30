@@ -1,5 +1,5 @@
 use db::models::{
-    execution_process::{ExecutionProcess, ExecutionProcessRunReason},
+    execution_process::{CreateExecutionProcess, ExecutionProcess, ExecutionProcessRunReason},
     session::{CreateSession, Session},
     workspace::{Workspace, WorkspaceError},
 };
@@ -62,12 +62,17 @@ pub async fn run_kiro_setup(
             }
         };
 
+    let create_execution_process = CreateExecutionProcess {
+        session_id: session.id,
+        executor_action,
+        run_reason: ExecutionProcessRunReason::CodingAgent,
+    };
+
     let execution_process = ExecutionProcess::create(
         &deployment.db().pool,
-        session.id,
-        workspace.id,
-        &ExecutionProcessRunReason::CodingAgent,
-        executor_action,
+        &create_execution_process,
+        Uuid::new_v4(),
+        &[],  // Empty repo states for setup process
     )
     .await?;
 

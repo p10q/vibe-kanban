@@ -9,12 +9,11 @@ use chrono::{DateTime, Utc};
 use deployment::Deployment;
 use rand::{Rng, distributions::Alphanumeric};
 use serde::{Deserialize, Serialize};
-use services::services::{config::save_config_to_file, oauth_credentials::Credentials};
+use services::services::oauth_credentials::Credentials;
 use sha2::{Digest, Sha256};
 use ts_rs::TS;
 use utils::{
     api::oauth::{HandoffInitRequest, HandoffRedeemRequest, StatusResponse},
-    assets::config_path,
     jwt::extract_expiration,
     response::ApiResponse,
 };
