@@ -39,7 +39,7 @@ pub struct Kiro {
 }
 
 impl Kiro {
-    fn build_command_builder(&self) -> CommandBuilder {
+    fn build_command_builder(&self) -> Result<CommandBuilder, crate::command::CommandBuildError> {
         let mut builder = CommandBuilder::new("kiro-cli chat")
             .extend_params(["--no-interactive", "--trust-all-tools"]);
 
@@ -63,7 +63,7 @@ impl StandardCodingAgentExecutor for Kiro {
         prompt: &str,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        let command_parts = self.build_command_builder().build_initial()?;
+        let command_parts = self.build_command_builder()?.build_initial()?;
         let (executable_path, args) = command_parts.into_resolved().await?;
         let combined_prompt = self.append_prompt.combine_prompt(prompt);
 
@@ -107,11 +107,12 @@ impl StandardCodingAgentExecutor for Kiro {
         current_dir: &Path,
         prompt: &str,
         session_id: &str,
+        _reset_to_message_id: Option<&str>,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
         // Use --resume flag to continue the most recent session
         let command_parts = self
-            .build_command_builder()
+            .build_command_builder()?
             .build_follow_up(&["--resume".to_string()])?;
         let (executable_path, args) = command_parts.into_resolved().await?;
         
