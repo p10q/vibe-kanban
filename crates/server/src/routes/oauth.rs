@@ -156,55 +156,22 @@ async fn handoff_complete(
             ApiError::Io(e)
         })?;
 
-    // Enable analytics automatically on login if not already enabled
-    let config_guard = deployment.config().read().await;
-    if !config_guard.analytics_enabled {
-        let mut new_config = config_guard.clone();
-        drop(config_guard); // Release read lock before acquiring write lock
-
-        new_config.analytics_enabled = true;
-
-        // Save updated config to disk
-        let config_path = config_path();
-        if let Err(e) = save_config_to_file(&new_config, &config_path).await {
-            tracing::warn!(
-                ?e,
-                "failed to save config after enabling analytics on login"
-            );
-        } else {
-            // Update in-memory config
-            let mut config = deployment.config().write().await;
-            *config = new_config;
-            drop(config);
-
-            tracing::info!("analytics automatically enabled after successful login");
-
-            // Track analytics_session_start event
-            if let Some(analytics) = deployment.analytics() {
-                analytics.track_event(
-                    deployment.user_id(),
-                    "analytics_session_start",
-                    Some(serde_json::json!({})),
-                );
-            }
-        }
-    } else {
-        drop(config_guard);
-    }
-
     // Fetch and cache the user's profile
     let _ = deployment.get_login_status().await;
 
-    if let Some(profile) = deployment.auth_context().cached_profile().await
-        && let Some(analytics) = deployment.analytics()
-    {
-        analytics.track_event(
-            deployment.user_id(),
-            "$identify",
-            Some(serde_json::json!({
-                "email": profile.email,
-            })),
-        );
+    // Track profile identification (only if user has opted in to analytics)
+    if deployment.config().read().await.analytics_enabled {
+        if let Some(profile) = deployment.auth_context().cached_profile().await
+            && let Some(analytics) = deployment.analytics()
+        {
+            analytics.track_event(
+                deployment.user_id(),
+                "$identify",
+                Some(serde_json::json!({
+                    "email": profile.email,
+                })),
+            );
+        }
     }
 
     Ok(close_window_response(format!(
